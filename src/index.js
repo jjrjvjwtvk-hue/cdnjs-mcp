@@ -206,8 +206,9 @@ const TOOLS = {
       "Published versions of a library, newest first, prereleases excluded by " +
       "default. Use this to pick a version. Two traps it handles: the API's " +
       "raw array can LEAD WITH A PRERELEASE (vue's first entry is an rc while " +
-      "its current release is older), and ordering is not guaranteed " +
-      "(three.js has 95 inversions from legacy r-tags). The current stable is " +
+      "its current release is older), and some libraries carry pre-semver tags " +
+      "that would otherwise outrank real releases (three.js has 217 of them, " +
+      "like r134 and 110, beside modern 0.187.0 builds). The current stable is " +
       "always marked.",
     inputSchema: {
       type: "object",
