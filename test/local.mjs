@@ -66,22 +66,35 @@ console.log("GOTCHA 2 — versions[0] can be a prerelease");
   check("include_prereleases brings them back", /-(rc|alpha|beta|canary)/i.test(tp));
 }
 
-console.log("GOTCHA 3 — ordering is not guaranteed (three.js legacy r-tags)");
+console.log("GOTCHA 3 — legacy tags must not outrank the current version");
 {
-  // three.js has 95 inversions in its raw array. Without the semver sort this
-  // output is out of order, so this check fails if the sort is removed.
-  const r = await tool("cdnjs_versions", { name: "three.js", limit: 100 });
+  // three.js carries 217 non-semver tags (r134, 110) beside modern 0.187.0
+  // releases. A naive numeric sort puts bare "110" above "0.187.0" and buries
+  // the current version under all of them. The assertion is self-anchoring:
+  // it reads the current version out of the same response, so it cannot rot.
+  const r = await tool("cdnjs_versions", { name: "three.js", limit: 10 });
   const t = r.json?.result?.content?.[0]?.text || "";
-  const listed = t.split("\n").filter((l) => /^[\dr]/.test(l)).map((l) => l.split("  ")[0].trim());
-  const key = (v) => String(v).replace(/^r/, "").split("-")[0].split(".")
-    .map((x) => parseInt(x, 10) || 0);
-  const cmp = (a, b) => { for (let i = 0; i < 4; i++) { const d = (key(a)[i] || 0) - (key(b)[i] || 0); if (d) return d; } return 0; };
-  let bad = null;
-  for (let i = 0; i < listed.length - 1; i++) {
-    if (cmp(listed[i], listed[i + 1]) < 0) { bad = `${listed[i]} before ${listed[i + 1]}`; break; }
+  const current = (t.match(/current stable is (.+)\.$/m) || [])[1];
+  const ROW = /^[0-9r][\w.\-+]*(\s{2}←\s*current)?\s*$/i;
+  const rows = t.split("\n").filter((l) => ROW.test(l)).map((l) => l.split("  ")[0].trim());
+  check("reports a current stable", !!current, t.slice(0, 80));
+  check("first listed version IS the current stable", rows[0] === current,
+    `first=${rows[0]} current=${current}`);
+  check("first row carries the marker", /←\s*current/.test(t.split("\n").find((l) => l.startsWith(rows[0])) || ""));
+  const isModern = (v) => String(v).replace(/^r/i, "").split("-")[0].split(".").length >= 3;
+  check("second entry is modern too, not a legacy tag", isModern(rows[1]),
+    `rows[0..2]=${rows.slice(0, 3).join(" | ")}`);
+
+  // And the tier rule itself: modern semver before legacy, across the board.
+  const full = await tool("cdnjs_versions", { name: "three.js", limit: 100 });
+  const ft = full.json?.result?.content?.[0]?.text || "";
+  const fr = ft.split("\n").filter((l) => ROW.test(l)).map((l) => l.split("  ")[0].trim());
+  const tier = (v) => (v.replace(/^r/i, "").split("-")[0].split(".").length >= 3 ? 1 : 0);
+  let regressed = null;
+  for (let i = 0; i < fr.length - 1; i++) {
+    if (tier(fr[i]) < tier(fr[i + 1])) { regressed = `${fr[i]} before ${fr[i + 1]}`; break; }
   }
-  check("output is monotonically descending", !bad, bad || "");
-  check("got a real list", listed.length > 20, `${listed.length} entries`);
+  check("no legacy tag precedes a modern version", !regressed, regressed || "");
 }
 
 console.log("search");

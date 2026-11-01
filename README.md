@@ -98,15 +98,27 @@ Take the `version` field for the current stable, never `versions[0]`. Pin from
 `cdnjs_versions` hides prereleases unless you ask for them, and always marks
 the current stable.
 
-### 3. Version ordering is not guaranteed
+### 3. Legacy tags are not semver and must not outrank real releases
 
-15 of those 20 arrays were already fully descending, and the rest invert only
-deep in ancient history (jquery lists `1.2.3` before `1.7`). The exception is
-**three.js, with 95 inversions**, from its legacy `r111`-style tags sitting
-alongside semver.
+Some libraries carry historical tags that predate semver. **three.js has 217 of
+them** — `r134`, `110` — sitting in the same array as modern `0.187.0`
+releases.
 
-Sorted semver-descending here, so output is consistent whichever library you
-ask about.
+Compared component-wise, bare `110` beats `0.187.0` on the first number. So a
+plain numeric sort buries the current version under every historical tag: ask
+for the 60 newest and you never see it.
+
+Here, anything with three or more dot-separated components is treated as modern
+and outranks anything with fewer. Within a tier, numeric descending, with
+prereleases below the release they qualify.
+
+**This shipped broken and was caught on the deployed Worker.** three.js's raw
+array was *already* correctly newest-first; the naive sort took a correct array
+and made it wrong. Worth stating because it inverts the obvious lesson — the
+sort exists for consistency across libraries, not because upstream ordering is
+usually bad. Ordering of the raw array was fine for 15 of 20 libraries sampled,
+and the rest invert only deep in ancient history (jquery lists `1.2.3` before
+`1.7`).
 
 ## Tests
 

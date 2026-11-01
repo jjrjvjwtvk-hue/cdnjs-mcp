@@ -49,12 +49,27 @@ async function api(path) {
   return body;
 }
 
-// ── semver, descending ──────────────────────────────────────────────────────
-// Enough to order real cdnjs version strings. A prerelease sorts below the
-// release it qualifies, which is what semver says and what callers expect.
+// ── version ordering, descending ────────────────────────────────────────────
+// Two tiers, and the tier has to come first. Some libraries carry legacy tags
+// that are not semver at all — three.js has 217 of them (`r134`, `110`) beside
+// modern `0.187.0` releases. Compared component-wise, bare `110` beats
+// `0.187.0` on the first number, so a naive numeric sort buries the current
+// version under every historical tag. That is a real bug this code shipped
+// with: three.js's raw array was ALREADY newest-first, and sorting it made it
+// wrong.
+//
+// So: anything with three or more dot-separated components is modern and
+// outranks anything with fewer. Within a tier, compare numerically, and a
+// prerelease sorts below the release it qualifies.
+function versionTier(v) {
+  return String(v).replace(/^r/i, "").split("-")[0].split(".").length >= 3 ? 1 : 0;
+}
+
 function cmpVersion(a, b) {
+  const tier = versionTier(b) - versionTier(a);
+  if (tier) return tier;
   const split = (v) => {
-    const [core, pre = ""] = String(v).split("-");
+    const [core, pre = ""] = String(v).replace(/^r/i, "").split("-");
     return [core.split(".").map((n) => parseInt(n, 10) || 0), pre];
   };
   const [ac, ap] = split(a);
