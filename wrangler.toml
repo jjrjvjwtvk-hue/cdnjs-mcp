@@ -1,0 +1,7 @@
+name = "cdnjs-mcp"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+workers_dev = true
+
+# No bindings, no secrets, no KV. The cdnjs API is public, unauthenticated and
+# read-only, so this Worker has nothing to leak and nothing to break.

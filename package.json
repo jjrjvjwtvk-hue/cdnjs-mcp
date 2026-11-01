@@ -1,0 +1,15 @@
+{
+  "name": "cdnjs-mcp",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Remote MCP server giving every Claude session live, read-only access to cdnjs.",
+  "scripts": {
+    "test": "node test/local.mjs",
+    "dev": "wrangler dev",
+    "deploy": "npm test && wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "4.42.0"
+  }
+}
